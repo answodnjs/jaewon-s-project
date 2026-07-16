@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TAG:ON - Bus Simulator</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #dfefff;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas { display: block; }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(228, 241, 255, 0.96), rgba(214, 233, 250, 0.96));
+      z-index: 20;
+    }
+
+    .panel {
+      width: min(540px, calc(100% - 32px));
+      padding: 32px 28px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 18px 50px rgba(34, 71, 105, 0.18);
+      text-align: center;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .title {
+      margin: 0 0 10px;
+      font-size: 44px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #1f4f7a;
+    }
+
+    .subtitle {
+      margin: 0 0 22px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #44607a;
+    }
+
+    .start-btn {
+      appearance: none;
+      border: 0;
+      padding: 14px 22px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, #1f7adb, #1558a8);
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(31, 122, 219, 0.28);
+    }
+
+    #hud {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      z-index: 8;
+      color: #18354f;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 10px 26px rgba(27, 53, 80, 0.12);
+      font-size: 14px;
+      line-height: 1.6;
+      user-select: none;
+    }
+
+    #crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      margin-left: -6px;
+      margin-top: -6px;
+      z-index: 9;
+      pointer-events: none;
+      display: none;
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: "";
+      position: absolute;
+      background: rgba(18, 46, 70, 0.8);
+      border-radius: 2px;
+    }
+
+    #crosshair::before {
+      left: 5px;
+      top: 0;
+      width: 2px;
+      height: 12px;
+    }
+
+    #crosshair::after {
+      left: 0;
+      top: 5px;
+      width: 12px;
+      height: 2px;
+    }
+
+    #prompt, #subtitle {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      color: #143650;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 14px;
+      padding: 10px 16px;
+      box-shadow: 0 10px 22px rgba(27, 53, 80, 0.12);
+      font-size: 15px;
+      line-height: 1.5;
+      display: none;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    #prompt { top: 20px; }
+    #subtitle { top: 68px; }
+
+    #fade {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 30;
+      transition: opacity 0.7s ease;
+    }
+
+    #fade.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .hidden { display: none !important; }
+
+    #webgl-error {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #eef5fb;
+      color: #21415f;
+      z-index: 40;
+      padding: 24px;
+      text-align: center;
+      font-size: 18px;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud">마우스로 시점 회전 / WASD 이동 / E 승차·하차</div>
+  <div id="crosshair"></div>
+  <div id="prompt"></div>
+  <div id="subtitle"></div>
+  <div id="fade"></div>
+
+  <div id="overlay">
+    <div class="panel">
+      <h1 class="title">TAG:ON</h1>
+      <p class="subtitle">
+        정류장 Scene ↔ 버스 내부 Scene 전환<br />
+        실제 승하차 경험에 가까운 흐름 구현
+      </p>
+      <button class="start-btn" id="startBtn">체험 시작</button>
+    </div>
+  </div>
+
+  <div id="webgl-error">
+    <div>
+      <div style="font-size:28px;font-weight:800;margin-bottom:12px;">WebGL을 사용할 수 없습니다.</div>
+      <div>브라우저 또는 그래픽 환경을 확인한 뒤 다시 실행해 주세요.</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script>
+    (function () {
+      const app = document.getElementById('app');
+      const overlay = document.getElementById('overlay');
+      const startBtn = document.getElementById('startBtn');
+      const webglError = document.getElementById('webgl-error');
+      const promptBox = document.getElementById('prompt');
+      const subtitleBox = document.getElementById('subtitle');
+      const crosshair = document.getElementById('crosshair');
+      const fade = document.getElementById('fade');
+
+      if (!window.THREE) {
+        webglError.style.display = 'flex';
+        overlay.classList.add('hidden');
+        return;
+      }
+
+      let renderer, clock;
+      let activeScene = null;
+      let activeCamera = null;
+
+      const scenes = {
+        exterior: {
+          scene: null,
+          camera: null,
+          playerRig: null,
+          busGroup: null,
+          doorL: null,
+          doorR: null,
+          doorML: null,
+          doorMR: null,
+          bus: {
+            position: new THREE.Vector3(0, 0, 36),
+            yaw: -Math.PI / 2,
+            speed: 0,
+            targetSpeed: 0,
+            phase: 'approach',
+            doorOpen: 0,
+            doorTarget: 0,
+            shake: 0
+          }
+        },
+        interior: {
+          scene: null,
+          camera: null,
+          playerRig: null,
+          busRig: null,
+          localPos: new THREE.Vector3(0, 1.7, 0),
+          playerYaw: 0,
+          playerPitch: 0,
+          inBus: true,
+          moving: false,
+          nextStopCountdown: 18,
+          doorOpen: 0,
+          doorTarget: 0,
+          speed: 0,
+          targetSpeed: 0,
+          shake: 0,
+          phase: 'ride'
+        }
+      };
+
+      const keys = { w: false, a: false, s: false, d: false };
+      let isPointerLocked = false;
+      let currentMode = 'exterior';
+      let transitionLock = false;
+
+      const extMat = {
+        bodyYellow: new THREE.MeshStandardMaterial({ color: 0xf1da73, roughness: 0.72, metalness: 0.08 }),
+        bodyWhite: new THREE.MeshStandardMaterial({ color: 0xf4f7fa, roughness: 0.88, metalness: 0.03 }),
+        darkMetal: new THREE.MeshStandardMaterial({ color: 0x2f343a, roughness: 0.62, metalness: 0.22 }),
+        windowGlass: new THREE.MeshStandardMaterial({ color: 0xa9d7ff, roughness: 0.07, metalness: 0.0, transparent: true, opacity: 0.63 }),
+        blackRubber: new THREE.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.96, metalness: 0.02 }),
+        floorMat: new THREE.MeshStandardMaterial({ color: 0x3c3f43, roughness: 1.0, metalness: 0.05 }),
+        floorPlate: new THREE.MeshStandardMaterial({ color: 0xaeb4ba, roughness: 0.45, metalness: 0.55 }),
+        seatBlue: new THREE.MeshStandardMaterial({ color: 0x2c67b8, roughness: 0.94, metalness: 0.02 }),
+        seatRed: new THREE.MeshStandardMaterial({ color: 0xb53c3c, roughness: 0.94, metalness: 0.02 }),
+        seatFrame: new THREE.MeshStandardMaterial({ color: 0x808890, roughness: 0.45, metalness: 0.65 }),
+        ceilingWhite: new THREE.MeshStandardMaterial({ color: 0xf3f5f7, roughness: 0.9, metalness: 0.02 }),
+        yellowHandrail: new THREE.MeshStandardMaterial({ color: 0xf1c400, roughness: 0.55, metalness: 0.12 }),
+        displayBlue: new THREE.MeshStandardMaterial({ color: 0x133a75, roughness: 0.55, metalness: 0.05 }),
+        displayGlow: new THREE.MeshStandardMaterial({ color: 0xa8efff, roughness: 0.35, metalness: 0.0, emissive: new THREE.Color(0x6edcff), emissiveIntensity: 0.4 })
+      };
+
+      function showPrompt(text) {
+        promptBox.textContent = text;
+        promptBox.style.display = text ? 'block' : 'none';
+      }
+
+      function showSubtitle(text) {
+        subtitleBox.textContent = text;
+        subtitleBox.style.display = text ? 'block' : 'none';
+      }
+
+      function setFade(on, callback) {
+        fade.classList.toggle('active', on);
+        window.setTimeout(function () {
+          if (typeof callback === 'function') callback();
+        }, 720);
+      }
+
+      function box(x, y, z) {
+        const g = new THREE.BoxGeometry(1, 1, 1);
+        g.scale(x, y, z);
+        return g;
+      }
+
+      function cyl(rt, rb, h, seg) {
+        return new THREE.CylinderGeometry(rt, rb, h, seg || 12);
+      }
+
+      function addMesh(geo, mat, x, y, z, rx, ry, rz, parent) {
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(x || 0, y || 0, z || 0);
+        m.rotation.set(rx || 0, ry || 0, rz || 0);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        parent.add(m);
+        return m;
+      }
+
+      function addGroup(parent, x, y, z, rx, ry, rz) {
+        const g = new THREE.Group();
+        g.position.set(x || 0, y || 0, z || 0);
+        g.rotation.set(rx || 0, ry || 0, rz || 0);
+        parent.add(g);
+        return g;
+      }
+
+      function createLighting(scene) {
+        scene.add(new THREE.AmbientLight(0xeaf4ff, 1.45));
+        const dir = new THREE.DirectionalLight(0xffffff, 1.35);
+        dir.position.set(18, 28, 14);
+        scene.add(dir);
+        const windowLight = new THREE.DirectionalLight(0xcfeaff, 0.9);
+        windowLight.position.set(-20, 8, 8);
+        scene.add(windowLight);
+      }
+
+      function buildExteriorScene() {
+        const s = new THREE.Scene();
+        s.background = new THREE.Color(0xdfefff);
+        s.fog = new THREE.Fog(0xdfefff, 18, 120);
+        createLighting(s);
+
+        const cam = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
+        cam.position.set(-12, 1.7, 14);
+
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshStandardMaterial({ color: 0xaeb8aa, roughness: 1 }));
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        s.add(ground);
+
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(18, 500), new THREE.MeshStandardMaterial({ color: 0x4b5158, roughness: 1 }));
+        road.rotation.x = -Math.PI / 2;
+        road.receiveShadow = true;
+        s.add(road);
+
+        const bus = scenes.exterior.bus;
+        const busGroup = new THREE.Group();
+        s.add(busGroup);
+
+        addMesh(box(4.55, 2.55, 11.75), extMat.bodyYellow, 0, 1.42, 0, 0, 0, 0, busGroup);
+        addMesh(box(4.48, 0.18, 11.12), extMat.bodyWhite, 0, 2.82, 0, 0, 0, 0, busGroup);
+        addMesh(box(4.45, 0.12, 11.06), extMat.bodyWhite, 0, 0.07, 0, 0, 0, 0, busGroup);
+
+        const doorFrontL = addGroup(busGroup, 2.06, 0, 2.0, 0, 0, 0);
+        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, -0.58, 0, 0, 0, doorFrontL);
+        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, 0.04, 1.0, -0.58, 0, 0, 0, doorFrontL);
+        const doorFrontR = addGroup(busGroup, 2.06, 0, 2.0, 0, 0, 0);
+        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, 0.58, 0, 0, 0, doorFrontR);
+        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, -0.04, 1.0, 0.58, 0, 0, 0, doorFrontR);
+
+        const doorMidL = addGroup(busGroup, 2.06, 0, -1.35, 0, 0, 0);
+        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, -0.58, 0, 0, 0, doorMidL);
+        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, 0.04, 1.0, -0.58, 0, 0, 0, doorMidL);
+        const doorMidR = addGroup(busGroup, 2.06, 0, -1.35, 0, 0, 0);
+        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, 0.58, 0, 0, 0, doorMidR);
+        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, -0.04, 1.0, 0.58, 0, 0, 0, doorMidR);
+
+        scenes.exterior.scene = s;
+        scenes.exterior.camera = cam;
+        scenes.exterior.playerRig = addGroup(s, -12, 1.7, 14, 0, 0, 0);
+        scenes.exterior.busGroup = busGroup;
+        scenes.exterior.doorL = doorFrontL;
+        scenes.exterior.doorR = doorFrontR;
+        scenes.exterior.doorML = doorMidL;
+        scenes.exterior.doorMR = doorMidR;
+
+        const stopSign = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.5, 0.25), new THREE.MeshStandardMaterial({ color: 0xe6b800, roughness: 0.85 }));
+        stopSign.position.set(-4, 1.25, 6);
+        s.add(stopSign);
+
+        const roadMarks = new THREE.Group();
+        for (let i = 0; i < 30; i++) {
+          const mark = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 5), new THREE.MeshStandardMaterial({ color: 0xf2f3f5, roughness: 1 }));
+          mark.position.set(0, 0.03, -i * 10);
+          roadMarks.add(mark);
+        }
+        s.add(roadMarks);
+
+        const trees = new THREE.Group();
+        for (let i = 0; i < 28; i++) {
+          const side = i % 2 === 0 ? -7.5 : 7.5;
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0x7a5738, roughness: 1 }));
+          trunk.position.set(side, 0.7, -i * 7);
+          trees.add(trunk);
+          const crown = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 12), new THREE.MeshStandardMaterial({ color: 0x4b8d4d, roughness: 1 }));
+          crown.position.set(side, 1.8, -i * 7);
+          trees.add(crown);
+        }
+        s.add(trees);
+
+        const busObj = bus;
+        busObj.position.set(0, 0, 36);
+        busObj.yaw = -Math.PI / 2;
+        busGroup.position.copy(busObj.position);
+        busGroup.rotation.y = busObj.yaw;
+
+        return s;
+      }
+
+      function buildInteriorScene() {
+        const s = new THREE.Scene();
+        s.background = new THREE.Color(0xe9f2fb);
+        s.fog = new THREE.Fog(0xe9f2fb, 12, 80);
+        createLighting(s);
+
+        const cam = new THREE.PerspectiveCamera(67, window.innerWidth / window.innerHeight, 0.1, 300);
+        cam.position.set(0, 1.7, 0);
+
+        const busRig = new THREE.Group();
+        s.add(busRig);
+
+        addMesh(box(4.55, 2.55, 11.75), extMat.bodyYellow, 0, 1.42, 0, 0, 0, 0, busRig);
+        addMesh(box(3.9, 2.15, 10.9), new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.92 }), 0, 2.15, 0, 0, 0, 0, busRig);
+        addMesh(box(3.72, 2.0, 10.7), new THREE.MeshStandardMaterial({ color: 0xf8f9fb, roughness: 0.95 }), 0, 2.1, 0, 0, 0, 0, busRig);
+        addMesh(box(3.62, 0.16, 10.65), extMat.floorMat, 0, 0.08, 0, 0, 0, 0, busRig);
+        addMesh(box(3.45, 0.05, 8.9), extMat.floorPlate, 0, 0.13, 0, 0, 0, 0, busRig);
+
+        for (let i = -4; i <= 4; i++) {
+          if (i === 0) continue;
+          const z = i * 1.28;
+          addMesh(box(0.08, 1.04, 1.1), extMat.darkMetal, 2.06, 1.95, z, 0, 0, 0, busRig);
+          addMesh(box(0.04, 0.96, 1.0), extMat.windowGlass, 2.11, 1.95, z, 0, 0, 0, busRig);
+          addMesh(box(0.02, 1.08, 1.14), extMat.blackRubber, 2.01, 1.95, z, 0, 0, 0, busRig);
+          addMesh(box(0.08, 1.04, 1.1), extMat.darkMetal, -2.06, 1.95, z, 0, 0, 0, busRig);
+          addMesh(box(0.04, 0.96, 1.0), extMat.windowGlass, -2.11, 1.95, z, 0, 0, 0, busRig);
+          addMesh(box(0.02, 1.08, 1.14), extMat.blackRubber, -2.01, 1.95, z, 0, 0, 0, busRig);
+        }
+
+        for (let i = -3; i <= 3; i++) {
+          addMesh(cyl(0.05, 0.05, 2.6, 10), extMat.yellowHandrail, -1.55, 1.35, i * 1.8, 0, 0, 0, busRig);
+          addMesh(cyl(0.05, 0.05, 2.6, 10), extMat.yellowHandrail, 1.55, 1.35, i * 1.8, 0, 0, 0, busRig);
+        }
+
+        const base = box(0.62, 0.12, 0.58);
+        const back = box(0.62, 0.62, 0.1);
+        const arm = box(0.08, 0.18, 0.5);
+        const leg = cyl(0.03, 0.03, 0.8, 8);
+        const seats = new THREE.Group();
+        busRig.add(seats);
+
+        function seat(x, z, red, rotY) {
+          const s2 = addGroup(seats, x, 0, z, 0, rotY, 0);
+          addMesh(base, red ? extMat.seatRed : extMat.seatBlue, 0, 0.58, 0, 0, 0, 0, s2);
+          addMesh(back, red ? extMat.seatRed : extMat.seatBlue, 0, 0.95, -0.24, 0, 0, 0, s2);
+          addMesh(arm, extMat.darkMetal, 0.34, 0.78, 0, 0, 0, 0, s2);
+          addMesh(arm, extMat.darkMetal, -0.34, 0.78, 0, 0, 0, 0, s2);
+          addMesh(leg, extMat.seatFrame, 0.26, 0.27, 0.18, 0, 0, 0, s2);
+          addMesh(leg, extMat.seatFrame, -0.26, 0.27, 0.18, 0, 0, 0, s2);
+        }
+
+        [-4.9, -3.0, -1.15, 1.0, 3.0, 4.9].forEach(function (z, idx) {
+          seat(-1.44, z, idx < 2, Math.PI / 2);
+          seat(1.44, z, idx < 2, -Math.PI / 2);
+        });
+
+        addMesh(box(2.05, 1.55, 2.15), new THREE.MeshStandardMaterial({ color: 0xe8edf2, roughness: 0.9 }), 1.2, 1.0, 5.0, 0, 0, 0, busRig);
+        addMesh(box(0.1, 1.45, 2.08), new THREE.MeshStandardMaterial({ color: 0xc7d4df, roughness: 0.88 }), 0.2, 1.0, 5.0, 0, 0, 0, busRig);
+
+        const frontDoor = addGroup(busRig, 2.06, 0, 2.0, 0, 0, 0);
+        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, -0.58, 0, 0, 0, frontDoor);
+        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, 0.04, 1.0, -0.58, 0, 0, 0, frontDoor);
+        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, -0.04, 1.0, 0.58, 0, 0, 0, frontDoor);
+
+        const midDoor = addGroup(busRig, 2.06, 0, -1.35, 0, 0, 0);
+        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, -0.58, 0, 0, 0, midDoor);
+        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, 0.04, 1.0, -0.58, 0, 0, 0, midDoor);
+        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, -0.04, 1.0, 0.58, 0, 0, 0, midDoor);
+
+        scenes.interior.scene = s;
+        scenes.interior.camera = cam;
+        scenes.interior.playerRig = addGroup(s, 0, 1.7, 0, 0, 0, 0);
+        scenes.interior.busRig = busRig;
+        scenes.interior.doorOpen = 0;
+        scenes.interior.doorTarget = 0;
+        scenes.interior.speed = 0;
+        scenes.interior.targetSpeed = 0;
+
+        const interiorState = scenes.interior;
+        interiorState.playerRig.position.set(0, 1.7, 0);
+        return s;
+      }
+
+      function switchTo(mode) {
+        currentMode = mode;
+        activeScene = scenes[mode].scene;
+        activeCamera = scenes[mode].camera;
+        crosshair.style.display = isPointerLocked ? 'block' : 'none';
+      }
+
+      function worldToLocalInBus(pos) {
+        const busPos = scenes.exterior.bus.position;
+        const busYaw = scenes.exterior.bus.yaw;
+        const dx = pos.x - busPos.x;
+        const dz = pos.z - busPos.z;
+        const cos = Math.cos(-busYaw);
+        const sin = Math.sin(-busYaw);
+        return new THREE.Vector3(dx * cos - dz * sin, pos.y, dx * sin + dz * cos);
+      }
+
+      function localToWorldInBus(local) {
+        const busPos = scenes.exterior.bus.position;
+        const busYaw = scenes.exterior.bus.yaw;
+        const cos = Math.cos(busYaw);
+        const sin = Math.sin(busYaw);
+        return new THREE.Vector3(
+          busPos.x + local.x * cos - local.z * sin,
+          local.y,
+          busPos.z + local.x * sin + local.z * cos
+        );
+      }
+
+      function clampLocal(local) {
+        local.x = THREE.MathUtils.clamp(local.x, -1.45, 1.45);
+        local.z = THREE.MathUtils.clamp(local.z, -5.6, 5.8);
+        if (local.z > 2.35 && Math.abs(local.x) > 0.55) local.x = THREE.MathUtils.clamp(local.x, -0.55, 0.55);
+        if (local.z < -2.1 && Math.abs(local.x) > 0.7) local.x = THREE.MathUtils.clamp(local.x, -0.7, 0.7);
+        return local;
+      }
+
+      function nearFrontDoorExterior() {
+        const local = worldToLocalInBus(scenes.exterior.playerRig.position);
+        const dist = Math.sqrt(Math.pow(local.x - 1.02, 2) + Math.pow(local.z - 2.0, 2));
+        return dist < 1.6 && scenes.exterior.bus.phase === 'boarding';
+      }
+
+      function nearMidDoorInterior() {
+        const p = scenes.interior.playerRig.position;
+        const dist = Math.sqrt(Math.pow(p.x - 0.95, 2) + Math.pow(p.z + 1.35, 2));
+        return dist < 1.7 && scenes.interior.doorOpen > 0.6 && scenes.interior.phase === 'dropoff';
+      }
+
+      function openExteriorDoors() {
+        scenes.exterior.bus.doorTarget = 1;
+        scenes.exterior.doorL.position.x = -0.42;
+        scenes.exterior.doorR.position.x = 0.42;
+        scenes.exterior.doorML.position.x = -0.42;
+        scenes.exterior.doorMR.position.x = 0.42;
+      }
+
+      function closeExteriorDoors() {
+        scenes.exterior.bus.doorTarget = 0;
+        scenes.exterior.doorL.position.x = 0;
+        scenes.exterior.doorR.position.x = 0;
+        scenes.exterior.doorML.position.x = 0;
+        scenes.exterior.doorMR.position.x = 0;
+      }
+
+      function handleE() {
+        if (transitionLock) return;
+        if (currentMode === 'exterior' && nearFrontDoorExterior()) {
+          transitionLock = true;
+          showSubtitle('문이 열립니다.');
+          fadeToInterior();
+        } else if (currentMode === 'interior' && nearMidDoorInterior()) {
+          transitionLock = true;
+          showSubtitle('문이 열립니다.');
+          fadeToExterior();
+        }
+      }
+
+      function fadeToInterior() {
+        fade.classList.add('active');
+        window.setTimeout(function () {
+          scenes.interior.playerRig.position.set(0, 1.7, 0);
+          scenes.interior.playerYaw = 0;
+          scenes.interior.playerPitch = 0;
+          scenes.interior.phase = 'ride';
+          scenes.interior.inBus = true;
+          switchTo('interior');
+          fade.classList.remove('active');
+          showSubtitle('출발하겠습니다.');
+          showPrompt('');
+          transitionLock = false;
+        }, 760);
+      }
+
+      function fadeToExterior() {
+        fade.classList.add('active');
+        window.setTimeout(function () {
+          const exitPos = localToWorldInBus(new THREE.Vector3(0, 1.7, -2.4));
+          scenes.exterior.playerRig.position.copy(exitPos);
+          scenes.exterior.playerRig.position.y = 1.7;
+          scenes.exterior.playerRig.position.z += 2.2;
+          scenes.exterior.playerRig.position.x += 1.0;
+          switchTo('exterior');
+          scenes.exterior.bus.phase = 'boarding';
+          closeExteriorDoors();
+          fade.classList.remove('active');
+          showSubtitle('');
+          transitionLock = false;
+        }, 760);
+      }
+
+      function updateExterior(delta) {
+        const bus = scenes.exterior.bus;
+        const busGroup = scenes.exterior.busGroup;
+
+        if (bus.phase === 'approach') {
+          bus.targetSpeed = 6.2;
+          bus.position.z -= bus.speed * delta;
+          if (bus.position.z <= 18) {
+            bus.phase = 'boarding';
+            bus.targetSpeed = 0;
+            bus.doorTarget = 1;
+            showSubtitle('문이 열립니다.');
+          }
+        } else if (bus.phase === 'boarding') {
+          bus.targetSpeed = 0;
+          bus.doorTarget = 1;
+        }
+
+        bus.speed += (bus.targetSpeed - bus.speed) * delta * 1.6;
+        bus.position.z -= bus.speed * delta;
+        bus.doorOpen += (bus.doorTarget - bus.doorOpen) * delta * 3.5;
+
+        const shake = Math.sin(clock.elapsedTime * 10) * 0.002 + Math.abs(bus.targetSpeed - bus.speed) * 0.0007;
+        bus.shake = shake;
+        busGroup.position.set(bus.position.x, 0.02 + shake, bus.position.z);
+        busGroup.rotation.y = bus.yaw;
+
+        scenes.exterior.doorL.position.x = -bus.doorOpen * 0.42;
+        scenes.exterior.doorR.position.x = bus.doorOpen * 0.42;
+        scenes.exterior.doorML.position.x = -bus.doorOpen * 0.42;
+        scenes.exterior.doorMR.position.x = bus.doorOpen * 0.42;
+
+        const cam = scenes.exterior.camera;
+        const player = scenes.exterior.playerRig;
+        const speed = 4.8;
+        const move = new THREE.Vector3();
+        if (keys.w) move.z -= 1;
+        if (keys.s) move.z += 1;
+        if (keys.a) move.x -= 1;
+        if (keys.d) move.x += 1;
+        if (move.lengthSq() > 0) {
+          move.normalize();
+          const sin = Math.sin(stateExtPlayerYaw);
+          const cos = Math.cos(stateExtPlayerYaw);
+          player.position.x += (move.x * cos - move.z * sin) * speed * delta;
+          player.position.z += (move.z * cos + move.x * sin) * speed * delta;
+        }
+
+        player.position.y = 1.7;
+        const lookTarget = new THREE.Vector3(
+          player.position.x + Math.sin(stateExtPlayerYaw) * Math.cos(stateExtPlayerPitch),
+          player.position.y + Math.sin(stateExtPlayerPitch),
+          player.position.z - Math.cos(stateExtPlayerYaw) * Math.cos(stateExtPlayerPitch)
+        );
+        cam.position.copy(player.position);
+        cam.lookAt(lookTarget);
+
+        if (nearFrontDoorExterior()) showPrompt('E 키를 눌러 승차');
+        else showPrompt('');
+      }
+
+      function updateInterior(delta) {
+        const interior = scenes.interior;
+        const bus = scenes.exterior.bus;
+
+        if (interior.phase === 'ride') {
+          interior.targetSpeed = 1;
+          interior.nextStopCountdown -= delta;
+          if (interior.nextStopCountdown <= 0) {
+            interior.phase = 'slowing';
+            showSubtitle('이번 정류장은 다음 정류장입니다.');
+          }
+        } else if (interior.phase === 'slowing') {
+          interior.targetSpeed = 0;
+          interior.doorTarget = 1;
+          if (interior.speed < 0.08) {
+            interior.phase = 'dropoff';
+            showSubtitle('문이 열립니다.');
+          }
+        } else if (interior.phase === 'dropoff') {
+          interior.targetSpeed = 0;
+          interior.doorTarget = 1;
+        }
+
+        interior.speed += (interior.targetSpeed - interior.speed) * delta * 1.2;
+        interior.doorOpen += (interior.doorTarget - interior.doorOpen) * delta * 3.0;
+        interior.shake = Math.sin(clock.elapsedTime * 12) * 0.012 + Math.abs(interior.targetSpeed - interior.speed) * 0.01;
+
+        interior.busRig.position.y = interior.shake * 0.2;
+        interior.busRig.rotation.z = interior.shake * 0.04;
+        interior.busRig.rotation.x = interior.shake * 0.03;
+
+        const cam = interior.camera;
+        const player = interior.playerRig;
+        const move = new THREE.Vector3();
+        if (keys.w) move.z -= 1;
+        if (keys.s) move.z += 1;
+        if (keys.a) move.x -= 1;
+        if (keys.d) move.x += 1;
+
+        if (move.lengthSq() > 0) {
+          move.normalize();
+          const speed = 3.2;
+          const sin = Math.sin(interior.playerYaw);
+          const cos = Math.cos(interior.playerYaw);
+          interior.localPos.x += (move.x * cos - move.z * sin) * speed * delta;
+          interior.localPos.z += (move.z * cos + move.x * sin) * speed * delta;
+        }
+
+        clampLocal(interior.localPos);
+        player.position.copy(interior.localPos);
+        player.position.y = 1.7 + interior.shake * 0.25;
+
+        const lookTarget = new THREE.Vector3(
+          player.position.x + Math.sin(interior.playerYaw) * Math.cos(interior.playerPitch),
+          player.position.y + Math.sin(interior.playerPitch),
+          player.position.z - Math.cos(interior.playerYaw) * Math.cos(interior.playerPitch)
+        );
+        cam.position.copy(player.position);
+        cam.lookAt(lookTarget);
+
+        if (interior.phase === 'dropoff') {
+          showPrompt('E 키를 눌러 하차');
+        } else {
+          showPrompt('');
+        }
+
+        if (interior.phase === 'dropoff' && Math.abs(interior.doorOpen - 1) < 0.05 && nearMidDoorInterior()) {
+          showPrompt('E 키를 눌러 하차');
+        }
+      }
+
+      let stateExtPlayerYaw = 0;
+      let stateExtPlayerPitch = 0;
+
+      function updateControls(delta) {
+        if (currentMode === 'exterior') {
+          stateExtPlayerYaw -= 0.0022 * mouseDX;
+          stateExtPlayerPitch -= 0.0022 * mouseDY;
+          stateExtPlayerPitch = Math.max(-1.35, Math.min(1.35, stateExtPlayerPitch));
+        } else {
+          scenes.interior.playerYaw -= 0.0022 * mouseDX;
+          scenes.interior.playerPitch -= 0.0022 * mouseDY;
+          scenes.interior.playerPitch = Math.max(-1.35, Math.min(1.35, scenes.interior.playerPitch));
+        }
+      }
+
+      let mouseDX = 0;
+      let mouseDY = 0;
+      document.addEventListener('mousemove', function (event) {
+        if (!isPointerLocked) return;
+        mouseDX = event.movementX;
+        mouseDY = event.movementY;
+        updateControls();
+        mouseDX = 0;
+        mouseDY = 0;
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+
+        if (currentMode === 'exterior') {
+          updateExterior(delta);
+        } else {
+          updateInterior(delta);
+        }
+
+        renderer.render(activeScene, activeCamera);
+      }
+
+      function onPointerLockChange() {
+        isPointerLocked = document.pointerLockElement === renderer.domElement;
+        crosshair.style.display = isPointerLocked ? 'block' : 'none';
+      }
+
+      function onKeyDown(event) {
+        const key = event.key.toLowerCase();
+        if (key === 'w') keys.w = true;
+        if (key === 'a') keys.a = true;
+        if (key === 's') keys.s = true;
+        if (key === 'd') keys.d = true;
+        if (key === 'e') handleE();
+      }
+
+      function onKeyUp(event) {
+        const key = event.key.toLowerCase();
+        if (key === 'w') keys.w = false;
+        if (key === 'a') keys.a = false;
+        if (key === 's') keys.s = false;
+        if (key === 'd') keys.d = false;
+      }
+
+      function onResize() {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        scenes.exterior.camera.aspect = window.innerWidth / window.innerHeight;
+        scenes.exterior.camera.updateProjectionMatrix();
+        scenes.interior.camera.aspect = window.innerWidth / window.innerHeight;
+        scenes.interior.camera.updateProjectionMatrix();
+      }
+
+      startBtn.addEventListener('click', function () {
+        overlay.classList.add('hidden');
+        lockPointer();
+      });
+
+      function lockPointer() {
+        if (renderer && renderer.domElement && renderer.domElement.requestPointerLock) {
+          renderer.domElement.requestPointerLock();
+        }
+      }
+
+      createWorld();
+
+      function createWorld() {
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        app.appendChild(renderer.domElement);
+
+        clock = new THREE.Clock();
+
+        buildExteriorScene();
+        buildInteriorScene();
+        switchTo('exterior');
+
+        window.addEventListener('resize', onResize);
+        document.addEventListener('pointerlockchange', onPointerLockChange);
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+        animate();
+      }
+    })();
+  </script>
+</body>
+</html>
