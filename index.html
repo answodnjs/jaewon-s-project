@@ -2,860 +2,764 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TAG:ON - Bus Simulator</title>
+  <title>휠체어 스마트 버스 탑승 예약 3D 시뮬레이터</title>
   <style>
-    html, body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #dfefff;
+    :root{
+      --bg:#bfe3ff;
+      --panel:rgba(255,255,255,.94);
+      --panel2:rgba(245,251,255,.96);
+      --text:#153044;
+      --muted:#55728a;
+      --primary:#4a99d9;
+      --primary2:#2b79bd;
+      --accent:#55b57e;
+      --accent2:#2f8d5f;
+      --shadow:rgba(0,0,0,.22);
     }
-
-    #app {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background: linear-gradient(to bottom, #9fd5ff 0%, #e6f6ff 52%, #d9e6ef 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      color:var(--text);
     }
-
-    canvas { display: block; }
-
-    #overlay {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(180deg, rgba(228, 241, 255, 0.96), rgba(214, 233, 250, 0.96));
-      z-index: 20;
+    canvas{display:block}
+    #overlay{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
     }
-
-    .panel {
-      width: min(540px, calc(100% - 32px));
-      padding: 32px 28px;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.85);
-      box-shadow: 0 18px 50px rgba(34, 71, 105, 0.18);
-      text-align: center;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+    #hud, #intro, #success{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      text-align:center;
+      border-radius:18px;
+      box-shadow:0 18px 36px var(--shadow);
+      backdrop-filter: blur(8px);
     }
-
-    .title {
-      margin: 0 0 10px;
-      font-size: 44px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      color: #1f4f7a;
+    #hud{
+      top:16px;
+      padding:10px 16px;
+      background:rgba(255,255,255,.78);
+      font-weight:800;
+      color:#21425a;
+      border:1px solid rgba(53,94,123,.16);
+      font-size:16px;
     }
-
-    .subtitle {
-      margin: 0 0 22px;
-      font-size: 16px;
-      line-height: 1.6;
-      color: #44607a;
+    #intro, #success{
+      display:none;
+      top:50%;
+      transform:translate(-50%, -50%);
+      min-width:min(82vw,760px);
+      padding:22px 28px;
+      background:rgba(255,255,255,.94);
+      border:2px solid rgba(74,153,217,.2);
     }
-
-    .start-btn {
-      appearance: none;
-      border: 0;
-      padding: 14px 22px;
-      border-radius: 999px;
-      font-size: 16px;
-      font-weight: 700;
-      color: white;
-      background: linear-gradient(135deg, #1f7adb, #1558a8);
-      cursor: pointer;
-      box-shadow: 0 10px 24px rgba(31, 122, 219, 0.28);
+    #intro .title{
+      font-size:clamp(22px, 2vw, 34px);
+      font-weight:900;
+      margin-bottom:8px;
     }
-
-    #hud {
-      position: fixed;
-      left: 16px;
-      bottom: 16px;
-      z-index: 8;
-      color: #18354f;
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      border-radius: 14px;
-      padding: 12px 14px;
-      box-shadow: 0 10px 26px rgba(27, 53, 80, 0.12);
-      font-size: 14px;
-      line-height: 1.6;
-      user-select: none;
+    #intro .sub{
+      font-size:clamp(15px, 1.2vw, 20px);
+      font-weight:700;
+      color:var(--muted);
+      line-height:1.5;
     }
-
-    #crosshair {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      width: 12px;
-      height: 12px;
-      margin-left: -6px;
-      margin-top: -6px;
-      z-index: 9;
-      pointer-events: none;
-      display: none;
+    #success{
+      border-color:rgba(85,181,126,.28);
     }
-
-    #crosshair::before,
-    #crosshair::after {
-      content: "";
-      position: absolute;
-      background: rgba(18, 46, 70, 0.8);
-      border-radius: 2px;
+    #success .title{
+      font-size:clamp(28px, 2.8vw, 52px);
+      font-weight:1000;
+      color:#13724b;
+      margin-bottom:6px;
     }
-
-    #crosshair::before {
-      left: 5px;
-      top: 0;
-      width: 2px;
-      height: 12px;
+    #success .sub{
+      font-size:clamp(16px, 1.2vw, 22px);
+      font-weight:800;
+      color:#346a51;
     }
-
-    #crosshair::after {
-      left: 0;
-      top: 5px;
-      width: 12px;
-      height: 2px;
+    #phone{
+      position:absolute;
+      right:18px;
+      bottom:16px;
+      width:min(34vw, 380px);
+      height:min(60vh, 640px);
+      border-radius:34px;
+      background:linear-gradient(to bottom, #1b2630, #0f151b);
+      padding:12px;
+      box-shadow:0 24px 50px rgba(0,0,0,.32);
+      transition:transform .8s ease, opacity .8s ease;
+      pointer-events:auto;
     }
-
-    #prompt, #subtitle {
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      color: #143650;
-      background: rgba(255, 255, 255, 0.85);
-      border-radius: 14px;
-      padding: 10px 16px;
-      box-shadow: 0 10px 22px rgba(27, 53, 80, 0.12);
-      font-size: 15px;
-      line-height: 1.5;
-      display: none;
-      user-select: none;
-      pointer-events: none;
+    #phone.hide{transform:translateY(120%);opacity:0;pointer-events:none}
+    .screen{
+      width:100%;
+      height:100%;
+      border-radius:24px;
+      overflow:hidden;
+      background:linear-gradient(to bottom, #f7feff, #e6f4ff);
+      display:flex;
+      flex-direction:column;
     }
-
-    #prompt { top: 20px; }
-    #subtitle { top: 68px; }
-
-    #fade {
-      position: fixed;
-      inset: 0;
-      background: #000;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 30;
-      transition: opacity 0.7s ease;
+    .top{
+      padding:14px 16px 10px;
+      background:linear-gradient(to bottom, #dff3ff, #c7e7ff);
+      border-bottom:1px solid rgba(24,52,75,.08);
     }
-
-    #fade.active {
-      opacity: 1;
-      pointer-events: auto;
+    .place{
+      font-size:clamp(18px, 1.6vw, 28px);
+      font-weight:1000;
+      color:#12334a;
+      letter-spacing:-.03em;
     }
-
-    .hidden { display: none !important; }
-
-    #webgl-error {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: #eef5fb;
-      color: #21415f;
-      z-index: 40;
-      padding: 24px;
-      text-align: center;
-      font-size: 18px;
-      line-height: 1.7;
+    .place2{
+      margin-top:4px;
+      font-size:clamp(12px, 1vw, 16px);
+      color:#4f6f86;
+      font-weight:800;
+    }
+    .list{
+      flex:1;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      overflow:auto;
+    }
+    .item{
+      border:none;
+      border-radius:18px;
+      background:linear-gradient(to right, #fff, #eef8ff);
+      color:#15384f;
+      padding:16px 16px;
+      text-align:left;
+      font-size:clamp(18px, 1.6vw, 26px);
+      font-weight:1000;
+      line-height:1.35;
+      border:2px solid rgba(80,131,170,.16);
+      box-shadow:0 8px 18px rgba(34,72,97,.1);
+      cursor:pointer;
+    }
+    .item small{
+      display:block;
+      margin-top:6px;
+      font-size:clamp(12px, 1vw, 15px);
+      font-weight:800;
+      color:#4c6c82;
+    }
+    .item.selected{
+      background:linear-gradient(to right, #dcf6e8, #effcf5);
+      border-color:rgba(67,168,117,.45);
+      outline:3px solid rgba(75,178,125,.15);
+    }
+    .action{
+      padding:14px;
+      border-top:1px solid rgba(24,52,75,.08);
+      background:linear-gradient(to bottom, rgba(248,253,255,0), rgba(231,244,255,.98));
+    }
+    .send{
+      width:100%;
+      border:none;
+      border-radius:22px;
+      padding:18px 16px;
+      font-size:clamp(18px, 1.7vw, 28px);
+      font-weight:1000;
+      color:#fff;
+      background:linear-gradient(to bottom, #77bceb, #2f7fbc);
+      box-shadow:0 12px 24px rgba(47,127,188,.28);
+      opacity:.5;
+      pointer-events:none;
+    }
+    .send.enabled{opacity:1;pointer-events:auto;cursor:pointer;}
+    #popup{
+      position:absolute;
+      left:50%;
+      top:10%;
+      transform:translateX(-50%);
+      display:none;
+      padding:14px 22px;
+      min-width:min(84vw,760px);
+      border-radius:16px;
+      background:rgba(255,255,255,.96);
+      border:2px solid rgba(74,153,217,.24);
+      box-shadow:0 16px 30px rgba(0,0,0,.16);
+      text-align:center;
+      font-size:clamp(16px, 1.4vw, 24px);
+      font-weight:900;
+      color:#13354b;
+    }
+    #popup.show{display:block}
+    #crosshair{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:16px;
+      height:16px;
+      transform:translate(-50%,-50%);
+      opacity:.7;
+    }
+    #crosshair:before,#crosshair:after{
+      content:"";
+      position:absolute;
+      background:#ffffff;
+      box-shadow:0 0 4px rgba(0,0,0,.4);
+    }
+    #crosshair:before{left:7px;top:0;width:2px;height:16px}
+    #crosshair:after{top:7px;left:0;width:16px;height:2px}
+    #start{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      pointer-events:auto;
+      background:linear-gradient(to bottom, rgba(159,213,255,.22), rgba(230,246,255,.1));
+    }
+    #start button{
+      border:none;
+      border-radius:20px;
+      padding:18px 26px;
+      font-size:clamp(18px, 1.5vw, 26px);
+      font-weight:1000;
+      background:linear-gradient(to bottom, #58a8e0, #2d7dbd);
+      color:white;
+      box-shadow:0 18px 35px rgba(45,125,189,.3);
+      cursor:pointer;
+    }
+    .help{
+      position:absolute;
+      left:16px;
+      bottom:16px;
+      max-width:min(44vw, 640px);
+      background:rgba(255,255,255,.75);
+      border:1px solid rgba(53,94,123,.16);
+      border-radius:16px;
+      padding:12px 14px;
+      font-size:14px;
+      font-weight:800;
+      color:#24465d;
     }
   </style>
 </head>
 <body>
-  <div id="app"></div>
-
-  <div id="hud">마우스로 시점 회전 / WASD 이동 / E 승차·하차</div>
-  <div id="crosshair"></div>
-  <div id="prompt"></div>
-  <div id="subtitle"></div>
-  <div id="fade"></div>
-
   <div id="overlay">
-    <div class="panel">
-      <h1 class="title">TAG:ON</h1>
-      <p class="subtitle">
-        정류장 Scene ↔ 버스 내부 Scene 전환<br />
-        실제 승하차 경험에 가까운 흐름 구현
-      </p>
-      <button class="start-btn" id="startBtn">체험 시작</button>
+    <div id="hud">강남역 사거리 정류장 · WASD/방향키 이동 · 마우스로 시선 이동</div>
+    <div id="popup">예약 알림이 전송되었습니다</div>
+    <div id="intro">
+      <div class="title">이제 버스로 이동하여 탑승해 주세요.</div>
+      <div class="sub">경사판 위로 안전하게 올라가 주세요.</div>
     </div>
-  </div>
-
-  <div id="webgl-error">
-    <div>
-      <div style="font-size:28px;font-weight:800;margin-bottom:12px;">WebGL을 사용할 수 없습니다.</div>
-      <div>브라우저 또는 그래픽 환경을 확인한 뒤 다시 실행해 주세요.</div>
+    <div id="success">
+      <div class="title">탑승 완료!</div>
+      <div class="sub">시뮬레이터가 종료되었습니다. 감사합니다.</div>
     </div>
+    <div id="phone">
+      <div class="screen">
+        <div class="top">
+          <div class="place">강남역 사거리 정류장</div>
+          <div class="place2">도착 예정 버스를 선택해 주세요</div>
+        </div>
+        <div class="list" id="list">
+          <button class="item selected" data-bus="340">340번 버스<small>2분 후 도착 · 저상버스 · 휠체어 탑승 가능</small></button>
+          <button class="item" data-bus="472">472번 버스<small>6분 후 도착 · 일반버스</small></button>
+          <button class="item" data-bus="551">551번 버스<small>9분 후 도착 · 저상버스</small></button>
+        </div>
+        <div class="action">
+          <button class="send enabled" id="send">휠체어 탑승 예정 알림 전송</button>
+        </div>
+      </div>
+    </div>
+    <div id="crosshair"></div>
+    <div id="start"><button id="startBtn">시뮬레이션 시작</button></div>
+    <div class="help">마우스 클릭 후 시점을 돌릴 수 있습니다. ESC로 해제됩니다. 버스 정차 후 경사판 위로 천천히 이동하세요.</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
-    (function () {
-      const app = document.getElementById('app');
-      const overlay = document.getElementById('overlay');
-      const startBtn = document.getElementById('startBtn');
-      const webglError = document.getElementById('webgl-error');
-      const promptBox = document.getElementById('prompt');
-      const subtitleBox = document.getElementById('subtitle');
-      const crosshair = document.getElementById('crosshair');
-      const fade = document.getElementById('fade');
+    let scene, camera, renderer, clock;
+    let bus, ramp, arrow, wheelchair, busDoors, busInteriorLight;
+    let moving = {forward:false,back:false,left:false,right:false};
+    let pointerLocked = false, yaw = 0, pitch = 0;
+    let state = 'ready';
+    let lockCooldown = false;
 
-      if (!window.THREE) {
-        webglError.style.display = 'flex';
-        overlay.classList.add('hidden');
-        return;
+    // 문 접기 애니메이션을 제어하기 위한 변수
+    let doorOpenProgress = 0; 
+    let leftDoorPivot1, leftDoorPivot2, rightDoorPivot1, rightDoorPivot2;
+
+    const phone = document.getElementById('phone');
+    const popup = document.getElementById('popup');
+    const intro = document.getElementById('intro');
+    const success = document.getElementById('success');
+    const start = document.getElementById('start');
+    const send = document.getElementById('send');
+    const items = [...document.querySelectorAll('.item')];
+    const startBtn = document.getElementById('startBtn');
+
+    const player = { x: 0.5, z: 6.5, speed: 1.4 };
+    const busState = { targetX: 0, moving: false, arrived: false };
+
+    init();
+    animate();
+
+    function init(){
+      scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0xcfeeff, 14, 95);
+      camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 250);
+      camera.position.set(player.x, 1.28, player.z);
+
+      renderer = new THREE.WebGLRenderer({antialias:true});
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(devicePixelRatio);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      document.body.insertBefore(renderer.domElement, document.body.firstChild);
+
+      clock = new THREE.Clock();
+
+      scene.add(new THREE.HemisphereLight(0xeaf7ff, 0xa9b7c2, 1.35));
+      const sun = new THREE.DirectionalLight(0xffffff, 1.9);
+      sun.position.set(18, 26, 14);
+      scene.add(sun);
+
+      scene.add(makeBox(140,0.2,140,0x565f69,0,-0.1,0));
+      
+      const sidewalk = makeBox(140,0.25,20,0xc7cdd3,0,0.08,8);
+      scene.add(sidewalk);
+
+      addRoadDetails();
+      addDetailedBusStop();
+
+      for(let i=0;i<8;i++){
+        const car = makeCar(-40 + i*14, i%2===0? -8: -16, i%2===0? 1: -1);
+        car.rotation.y = Math.PI/2; 
+        scene.add(car);
+      }
+      for(let i=0;i<10;i++){
+        const p = makePerson((Math.random()*40-20), 4 + Math.random()*8, Math.random()*Math.PI);
+        scene.add(p);
       }
 
-      let renderer, clock;
-      let activeScene = null;
-      let activeCamera = null;
+      wheelchair = makeWheelchair();
+      wheelchair.position.set(player.x, 0, player.z);
+      scene.add(wheelchair);
 
-      const scenes = {
-        exterior: {
-          scene: null,
-          camera: null,
-          playerRig: null,
-          busGroup: null,
-          doorL: null,
-          doorR: null,
-          doorML: null,
-          doorMR: null,
-          bus: {
-            position: new THREE.Vector3(0, 0, 36),
-            yaw: -Math.PI / 2,
-            speed: 0,
-            targetSpeed: 0,
-            phase: 'approach',
-            doorOpen: 0,
-            doorTarget: 0,
-            shake: 0
-          }
-        },
-        interior: {
-          scene: null,
-          camera: null,
-          playerRig: null,
-          busRig: null,
-          localPos: new THREE.Vector3(0, 1.7, 0),
-          playerYaw: 0,
-          playerPitch: 0,
-          inBus: true,
-          moving: false,
-          nextStopCountdown: 18,
-          doorOpen: 0,
-          doorTarget: 0,
-          speed: 0,
-          targetSpeed: 0,
-          shake: 0,
-          phase: 'ride'
+      bus = makeBus();
+      bus.position.set(-80, 0, -4.8);
+      bus.rotation.y = 0; 
+      scene.add(bus);
+
+      ramp = bus.getObjectByName('ramp');
+      busInteriorLight = bus.getObjectByName('interiorLight');
+
+      // [수정 사항 3] 훨씬 세련되고 날카롭고 뾰족하게 재설계한 화살표 촉
+      arrow = new THREE.Group();
+      const arrowMat = new THREE.MeshStandardMaterial({color:0xffcc00, emissive:0xaa8800, emissiveIntensity:0.8, roughness: 0.3});
+      
+      // 삼각뿔을 아주 길고 날카롭게 설정 (반지름 0.1, 높이 0.6)
+      const tipGeo = new THREE.ConeGeometry(0.08, 0.6, 4);
+      const tip = new THREE.Mesh(tipGeo, arrowMat);
+      tip.rotation.x = Math.PI; // 아래를 향하도록 회전
+      tip.position.y = 0.2;
+      
+      // 꼬리 부분도 머리 비율에 맞게 슬림하게 조율
+      const tailGeo = new THREE.BoxGeometry(0.04, 0.4, 0.04);
+      const tail = new THREE.Mesh(tailGeo, arrowMat);
+      tail.position.y = 0.6;
+      
+      arrow.add(tip, tail);
+      arrow.position.set(0.5, 0.02, -2.6);
+      arrow.visible = false;
+      scene.add(arrow);
+
+      const ambientGround = new THREE.Mesh(new THREE.PlaneGeometry(140,140), new THREE.MeshStandardMaterial({color:0xcdd7de, roughness:1}));
+      ambientGround.rotation.x = -Math.PI/2;
+      ambientGround.position.y = -0.001;
+      scene.add(ambientGround);
+
+      window.addEventListener('resize', onResize);
+      document.addEventListener('click', handlePointerLockRequest);
+      document.addEventListener('pointerlockchange', () => {
+        pointerLocked = document.pointerLockElement === renderer.domElement;
+        if(!pointerLocked && state !== 'end'){
+          lockCooldown = true;
+          setTimeout(()=>{ lockCooldown = false; }, 1000);
         }
-      };
-
-      const keys = { w: false, a: false, s: false, d: false };
-      let isPointerLocked = false;
-      let currentMode = 'exterior';
-      let transitionLock = false;
-
-      const extMat = {
-        bodyYellow: new THREE.MeshStandardMaterial({ color: 0xf1da73, roughness: 0.72, metalness: 0.08 }),
-        bodyWhite: new THREE.MeshStandardMaterial({ color: 0xf4f7fa, roughness: 0.88, metalness: 0.03 }),
-        darkMetal: new THREE.MeshStandardMaterial({ color: 0x2f343a, roughness: 0.62, metalness: 0.22 }),
-        windowGlass: new THREE.MeshStandardMaterial({ color: 0xa9d7ff, roughness: 0.07, metalness: 0.0, transparent: true, opacity: 0.63 }),
-        blackRubber: new THREE.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.96, metalness: 0.02 }),
-        floorMat: new THREE.MeshStandardMaterial({ color: 0x3c3f43, roughness: 1.0, metalness: 0.05 }),
-        floorPlate: new THREE.MeshStandardMaterial({ color: 0xaeb4ba, roughness: 0.45, metalness: 0.55 }),
-        seatBlue: new THREE.MeshStandardMaterial({ color: 0x2c67b8, roughness: 0.94, metalness: 0.02 }),
-        seatRed: new THREE.MeshStandardMaterial({ color: 0xb53c3c, roughness: 0.94, metalness: 0.02 }),
-        seatFrame: new THREE.MeshStandardMaterial({ color: 0x808890, roughness: 0.45, metalness: 0.65 }),
-        ceilingWhite: new THREE.MeshStandardMaterial({ color: 0xf3f5f7, roughness: 0.9, metalness: 0.02 }),
-        yellowHandrail: new THREE.MeshStandardMaterial({ color: 0xf1c400, roughness: 0.55, metalness: 0.12 }),
-        displayBlue: new THREE.MeshStandardMaterial({ color: 0x133a75, roughness: 0.55, metalness: 0.05 }),
-        displayGlow: new THREE.MeshStandardMaterial({ color: 0xa8efff, roughness: 0.35, metalness: 0.0, emissive: new THREE.Color(0x6edcff), emissiveIntensity: 0.4 })
-      };
-
-      function showPrompt(text) {
-        promptBox.textContent = text;
-        promptBox.style.display = text ? 'block' : 'none';
-      }
-
-      function showSubtitle(text) {
-        subtitleBox.textContent = text;
-        subtitleBox.style.display = text ? 'block' : 'none';
-      }
-
-      function setFade(on, callback) {
-        fade.classList.toggle('active', on);
-        window.setTimeout(function () {
-          if (typeof callback === 'function') callback();
-        }, 720);
-      }
-
-      function box(x, y, z) {
-        const g = new THREE.BoxGeometry(1, 1, 1);
-        g.scale(x, y, z);
-        return g;
-      }
-
-      function cyl(rt, rb, h, seg) {
-        return new THREE.CylinderGeometry(rt, rb, h, seg || 12);
-      }
-
-      function addMesh(geo, mat, x, y, z, rx, ry, rz, parent) {
-        const m = new THREE.Mesh(geo, mat);
-        m.position.set(x || 0, y || 0, z || 0);
-        m.rotation.set(rx || 0, ry || 0, rz || 0);
-        m.castShadow = true;
-        m.receiveShadow = true;
-        parent.add(m);
-        return m;
-      }
-
-      function addGroup(parent, x, y, z, rx, ry, rz) {
-        const g = new THREE.Group();
-        g.position.set(x || 0, y || 0, z || 0);
-        g.rotation.set(rx || 0, ry || 0, rz || 0);
-        parent.add(g);
-        return g;
-      }
-
-      function createLighting(scene) {
-        scene.add(new THREE.AmbientLight(0xeaf4ff, 1.45));
-        const dir = new THREE.DirectionalLight(0xffffff, 1.35);
-        dir.position.set(18, 28, 14);
-        scene.add(dir);
-        const windowLight = new THREE.DirectionalLight(0xcfeaff, 0.9);
-        windowLight.position.set(-20, 8, 8);
-        scene.add(windowLight);
-      }
-
-      function buildExteriorScene() {
-        const s = new THREE.Scene();
-        s.background = new THREE.Color(0xdfefff);
-        s.fog = new THREE.Fog(0xdfefff, 18, 120);
-        createLighting(s);
-
-        const cam = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
-        cam.position.set(-12, 1.7, 14);
-
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshStandardMaterial({ color: 0xaeb8aa, roughness: 1 }));
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        s.add(ground);
-
-        const road = new THREE.Mesh(new THREE.PlaneGeometry(18, 500), new THREE.MeshStandardMaterial({ color: 0x4b5158, roughness: 1 }));
-        road.rotation.x = -Math.PI / 2;
-        road.receiveShadow = true;
-        s.add(road);
-
-        const bus = scenes.exterior.bus;
-        const busGroup = new THREE.Group();
-        s.add(busGroup);
-
-        addMesh(box(4.55, 2.55, 11.75), extMat.bodyYellow, 0, 1.42, 0, 0, 0, 0, busGroup);
-        addMesh(box(4.48, 0.18, 11.12), extMat.bodyWhite, 0, 2.82, 0, 0, 0, 0, busGroup);
-        addMesh(box(4.45, 0.12, 11.06), extMat.bodyWhite, 0, 0.07, 0, 0, 0, 0, busGroup);
-
-        const doorFrontL = addGroup(busGroup, 2.06, 0, 2.0, 0, 0, 0);
-        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, -0.58, 0, 0, 0, doorFrontL);
-        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, 0.04, 1.0, -0.58, 0, 0, 0, doorFrontL);
-        const doorFrontR = addGroup(busGroup, 2.06, 0, 2.0, 0, 0, 0);
-        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, 0.58, 0, 0, 0, doorFrontR);
-        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, -0.04, 1.0, 0.58, 0, 0, 0, doorFrontR);
-
-        const doorMidL = addGroup(busGroup, 2.06, 0, -1.35, 0, 0, 0);
-        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, -0.58, 0, 0, 0, doorMidL);
-        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, 0.04, 1.0, -0.58, 0, 0, 0, doorMidL);
-        const doorMidR = addGroup(busGroup, 2.06, 0, -1.35, 0, 0, 0);
-        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, 0.58, 0, 0, 0, doorMidR);
-        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, -0.04, 1.0, 0.58, 0, 0, 0, doorMidR);
-
-        scenes.exterior.scene = s;
-        scenes.exterior.camera = cam;
-        scenes.exterior.playerRig = addGroup(s, -12, 1.7, 14, 0, 0, 0);
-        scenes.exterior.busGroup = busGroup;
-        scenes.exterior.doorL = doorFrontL;
-        scenes.exterior.doorR = doorFrontR;
-        scenes.exterior.doorML = doorMidL;
-        scenes.exterior.doorMR = doorMidR;
-
-        const stopSign = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.5, 0.25), new THREE.MeshStandardMaterial({ color: 0xe6b800, roughness: 0.85 }));
-        stopSign.position.set(-4, 1.25, 6);
-        s.add(stopSign);
-
-        const roadMarks = new THREE.Group();
-        for (let i = 0; i < 30; i++) {
-          const mark = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 5), new THREE.MeshStandardMaterial({ color: 0xf2f3f5, roughness: 1 }));
-          mark.position.set(0, 0.03, -i * 10);
-          roadMarks.add(mark);
-        }
-        s.add(roadMarks);
-
-        const trees = new THREE.Group();
-        for (let i = 0; i < 28; i++) {
-          const side = i % 2 === 0 ? -7.5 : 7.5;
-          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0x7a5738, roughness: 1 }));
-          trunk.position.set(side, 0.7, -i * 7);
-          trees.add(trunk);
-          const crown = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 12), new THREE.MeshStandardMaterial({ color: 0x4b8d4d, roughness: 1 }));
-          crown.position.set(side, 1.8, -i * 7);
-          trees.add(crown);
-        }
-        s.add(trees);
-
-        const busObj = bus;
-        busObj.position.set(0, 0, 36);
-        busObj.yaw = -Math.PI / 2;
-        busGroup.position.copy(busObj.position);
-        busGroup.rotation.y = busObj.yaw;
-
-        return s;
-      }
-
-      function buildInteriorScene() {
-        const s = new THREE.Scene();
-        s.background = new THREE.Color(0xe9f2fb);
-        s.fog = new THREE.Fog(0xe9f2fb, 12, 80);
-        createLighting(s);
-
-        const cam = new THREE.PerspectiveCamera(67, window.innerWidth / window.innerHeight, 0.1, 300);
-        cam.position.set(0, 1.7, 0);
-
-        const busRig = new THREE.Group();
-        s.add(busRig);
-
-        addMesh(box(4.55, 2.55, 11.75), extMat.bodyYellow, 0, 1.42, 0, 0, 0, 0, busRig);
-        addMesh(box(3.9, 2.15, 10.9), new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.92 }), 0, 2.15, 0, 0, 0, 0, busRig);
-        addMesh(box(3.72, 2.0, 10.7), new THREE.MeshStandardMaterial({ color: 0xf8f9fb, roughness: 0.95 }), 0, 2.1, 0, 0, 0, 0, busRig);
-        addMesh(box(3.62, 0.16, 10.65), extMat.floorMat, 0, 0.08, 0, 0, 0, 0, busRig);
-        addMesh(box(3.45, 0.05, 8.9), extMat.floorPlate, 0, 0.13, 0, 0, 0, 0, busRig);
-
-        for (let i = -4; i <= 4; i++) {
-          if (i === 0) continue;
-          const z = i * 1.28;
-          addMesh(box(0.08, 1.04, 1.1), extMat.darkMetal, 2.06, 1.95, z, 0, 0, 0, busRig);
-          addMesh(box(0.04, 0.96, 1.0), extMat.windowGlass, 2.11, 1.95, z, 0, 0, 0, busRig);
-          addMesh(box(0.02, 1.08, 1.14), extMat.blackRubber, 2.01, 1.95, z, 0, 0, 0, busRig);
-          addMesh(box(0.08, 1.04, 1.1), extMat.darkMetal, -2.06, 1.95, z, 0, 0, 0, busRig);
-          addMesh(box(0.04, 0.96, 1.0), extMat.windowGlass, -2.11, 1.95, z, 0, 0, 0, busRig);
-          addMesh(box(0.02, 1.08, 1.14), extMat.blackRubber, -2.01, 1.95, z, 0, 0, 0, busRig);
-        }
-
-        for (let i = -3; i <= 3; i++) {
-          addMesh(cyl(0.05, 0.05, 2.6, 10), extMat.yellowHandrail, -1.55, 1.35, i * 1.8, 0, 0, 0, busRig);
-          addMesh(cyl(0.05, 0.05, 2.6, 10), extMat.yellowHandrail, 1.55, 1.35, i * 1.8, 0, 0, 0, busRig);
-        }
-
-        const base = box(0.62, 0.12, 0.58);
-        const back = box(0.62, 0.62, 0.1);
-        const arm = box(0.08, 0.18, 0.5);
-        const leg = cyl(0.03, 0.03, 0.8, 8);
-        const seats = new THREE.Group();
-        busRig.add(seats);
-
-        function seat(x, z, red, rotY) {
-          const s2 = addGroup(seats, x, 0, z, 0, rotY, 0);
-          addMesh(base, red ? extMat.seatRed : extMat.seatBlue, 0, 0.58, 0, 0, 0, 0, s2);
-          addMesh(back, red ? extMat.seatRed : extMat.seatBlue, 0, 0.95, -0.24, 0, 0, 0, s2);
-          addMesh(arm, extMat.darkMetal, 0.34, 0.78, 0, 0, 0, 0, s2);
-          addMesh(arm, extMat.darkMetal, -0.34, 0.78, 0, 0, 0, 0, s2);
-          addMesh(leg, extMat.seatFrame, 0.26, 0.27, 0.18, 0, 0, 0, s2);
-          addMesh(leg, extMat.seatFrame, -0.26, 0.27, 0.18, 0, 0, 0, s2);
-        }
-
-        [-4.9, -3.0, -1.15, 1.0, 3.0, 4.9].forEach(function (z, idx) {
-          seat(-1.44, z, idx < 2, Math.PI / 2);
-          seat(1.44, z, idx < 2, -Math.PI / 2);
-        });
-
-        addMesh(box(2.05, 1.55, 2.15), new THREE.MeshStandardMaterial({ color: 0xe8edf2, roughness: 0.9 }), 1.2, 1.0, 5.0, 0, 0, 0, busRig);
-        addMesh(box(0.1, 1.45, 2.08), new THREE.MeshStandardMaterial({ color: 0xc7d4df, roughness: 0.88 }), 0.2, 1.0, 5.0, 0, 0, 0, busRig);
-
-        const frontDoor = addGroup(busRig, 2.06, 0, 2.0, 0, 0, 0);
-        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, -0.58, 0, 0, 0, frontDoor);
-        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, 0.04, 1.0, -0.58, 0, 0, 0, frontDoor);
-        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, -0.04, 1.0, 0.58, 0, 0, 0, frontDoor);
-
-        const midDoor = addGroup(busRig, 2.06, 0, -1.35, 0, 0, 0);
-        addMesh(box(0.08, 2.15, 1.15), extMat.darkMetal, 0, 1.08, -0.58, 0, 0, 0, midDoor);
-        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, 0.04, 1.0, -0.58, 0, 0, 0, midDoor);
-        addMesh(box(0.03, 1.95, 1.02), extMat.windowGlass, -0.04, 1.0, 0.58, 0, 0, 0, midDoor);
-
-        scenes.interior.scene = s;
-        scenes.interior.camera = cam;
-        scenes.interior.playerRig = addGroup(s, 0, 1.7, 0, 0, 0, 0);
-        scenes.interior.busRig = busRig;
-        scenes.interior.doorOpen = 0;
-        scenes.interior.doorTarget = 0;
-        scenes.interior.speed = 0;
-        scenes.interior.targetSpeed = 0;
-
-        const interiorState = scenes.interior;
-        interiorState.playerRig.position.set(0, 1.7, 0);
-        return s;
-      }
-
-      function switchTo(mode) {
-        currentMode = mode;
-        activeScene = scenes[mode].scene;
-        activeCamera = scenes[mode].camera;
-        crosshair.style.display = isPointerLocked ? 'block' : 'none';
-      }
-
-      function worldToLocalInBus(pos) {
-        const busPos = scenes.exterior.bus.position;
-        const busYaw = scenes.exterior.bus.yaw;
-        const dx = pos.x - busPos.x;
-        const dz = pos.z - busPos.z;
-        const cos = Math.cos(-busYaw);
-        const sin = Math.sin(-busYaw);
-        return new THREE.Vector3(dx * cos - dz * sin, pos.y, dx * sin + dz * cos);
-      }
-
-      function localToWorldInBus(local) {
-        const busPos = scenes.exterior.bus.position;
-        const busYaw = scenes.exterior.bus.yaw;
-        const cos = Math.cos(busYaw);
-        const sin = Math.sin(busYaw);
-        return new THREE.Vector3(
-          busPos.x + local.x * cos - local.z * sin,
-          local.y,
-          busPos.z + local.x * sin + local.z * cos
-        );
-      }
-
-      function clampLocal(local) {
-        local.x = THREE.MathUtils.clamp(local.x, -1.45, 1.45);
-        local.z = THREE.MathUtils.clamp(local.z, -5.6, 5.8);
-        if (local.z > 2.35 && Math.abs(local.x) > 0.55) local.x = THREE.MathUtils.clamp(local.x, -0.55, 0.55);
-        if (local.z < -2.1 && Math.abs(local.x) > 0.7) local.x = THREE.MathUtils.clamp(local.x, -0.7, 0.7);
-        return local;
-      }
-
-      function nearFrontDoorExterior() {
-        const local = worldToLocalInBus(scenes.exterior.playerRig.position);
-        const dist = Math.sqrt(Math.pow(local.x - 1.02, 2) + Math.pow(local.z - 2.0, 2));
-        return dist < 1.6 && scenes.exterior.bus.phase === 'boarding';
-      }
-
-      function nearMidDoorInterior() {
-        const p = scenes.interior.playerRig.position;
-        const dist = Math.sqrt(Math.pow(p.x - 0.95, 2) + Math.pow(p.z + 1.35, 2));
-        return dist < 1.7 && scenes.interior.doorOpen > 0.6 && scenes.interior.phase === 'dropoff';
-      }
-
-      function openExteriorDoors() {
-        scenes.exterior.bus.doorTarget = 1;
-        scenes.exterior.doorL.position.x = -0.42;
-        scenes.exterior.doorR.position.x = 0.42;
-        scenes.exterior.doorML.position.x = -0.42;
-        scenes.exterior.doorMR.position.x = 0.42;
-      }
-
-      function closeExteriorDoors() {
-        scenes.exterior.bus.doorTarget = 0;
-        scenes.exterior.doorL.position.x = 0;
-        scenes.exterior.doorR.position.x = 0;
-        scenes.exterior.doorML.position.x = 0;
-        scenes.exterior.doorMR.position.x = 0;
-      }
-
-      function handleE() {
-        if (transitionLock) return;
-        if (currentMode === 'exterior' && nearFrontDoorExterior()) {
-          transitionLock = true;
-          showSubtitle('문이 열립니다.');
-          fadeToInterior();
-        } else if (currentMode === 'interior' && nearMidDoorInterior()) {
-          transitionLock = true;
-          showSubtitle('문이 열립니다.');
-          fadeToExterior();
-        }
-      }
-
-      function fadeToInterior() {
-        fade.classList.add('active');
-        window.setTimeout(function () {
-          scenes.interior.playerRig.position.set(0, 1.7, 0);
-          scenes.interior.playerYaw = 0;
-          scenes.interior.playerPitch = 0;
-          scenes.interior.phase = 'ride';
-          scenes.interior.inBus = true;
-          switchTo('interior');
-          fade.classList.remove('active');
-          showSubtitle('출발하겠습니다.');
-          showPrompt('');
-          transitionLock = false;
-        }, 760);
-      }
-
-      function fadeToExterior() {
-        fade.classList.add('active');
-        window.setTimeout(function () {
-          const exitPos = localToWorldInBus(new THREE.Vector3(0, 1.7, -2.4));
-          scenes.exterior.playerRig.position.copy(exitPos);
-          scenes.exterior.playerRig.position.y = 1.7;
-          scenes.exterior.playerRig.position.z += 2.2;
-          scenes.exterior.playerRig.position.x += 1.0;
-          switchTo('exterior');
-          scenes.exterior.bus.phase = 'boarding';
-          closeExteriorDoors();
-          fade.classList.remove('active');
-          showSubtitle('');
-          transitionLock = false;
-        }, 760);
-      }
-
-      function updateExterior(delta) {
-        const bus = scenes.exterior.bus;
-        const busGroup = scenes.exterior.busGroup;
-
-        if (bus.phase === 'approach') {
-          bus.targetSpeed = 6.2;
-          bus.position.z -= bus.speed * delta;
-          if (bus.position.z <= 18) {
-            bus.phase = 'boarding';
-            bus.targetSpeed = 0;
-            bus.doorTarget = 1;
-            showSubtitle('문이 열립니다.');
-          }
-        } else if (bus.phase === 'boarding') {
-          bus.targetSpeed = 0;
-          bus.doorTarget = 1;
-        }
-
-        bus.speed += (bus.targetSpeed - bus.speed) * delta * 1.6;
-        bus.position.z -= bus.speed * delta;
-        bus.doorOpen += (bus.doorTarget - bus.doorOpen) * delta * 3.5;
-
-        const shake = Math.sin(clock.elapsedTime * 10) * 0.002 + Math.abs(bus.targetSpeed - bus.speed) * 0.0007;
-        bus.shake = shake;
-        busGroup.position.set(bus.position.x, 0.02 + shake, bus.position.z);
-        busGroup.rotation.y = bus.yaw;
-
-        scenes.exterior.doorL.position.x = -bus.doorOpen * 0.42;
-        scenes.exterior.doorR.position.x = bus.doorOpen * 0.42;
-        scenes.exterior.doorML.position.x = -bus.doorOpen * 0.42;
-        scenes.exterior.doorMR.position.x = bus.doorOpen * 0.42;
-
-        const cam = scenes.exterior.camera;
-        const player = scenes.exterior.playerRig;
-        const speed = 4.8;
-        const move = new THREE.Vector3();
-        if (keys.w) move.z -= 1;
-        if (keys.s) move.z += 1;
-        if (keys.a) move.x -= 1;
-        if (keys.d) move.x += 1;
-        if (move.lengthSq() > 0) {
-          move.normalize();
-          const sin = Math.sin(stateExtPlayerYaw);
-          const cos = Math.cos(stateExtPlayerYaw);
-          player.position.x += (move.x * cos - move.z * sin) * speed * delta;
-          player.position.z += (move.z * cos + move.x * sin) * speed * delta;
-        }
-
-        player.position.y = 1.7;
-        const lookTarget = new THREE.Vector3(
-          player.position.x + Math.sin(stateExtPlayerYaw) * Math.cos(stateExtPlayerPitch),
-          player.position.y + Math.sin(stateExtPlayerPitch),
-          player.position.z - Math.cos(stateExtPlayerYaw) * Math.cos(stateExtPlayerPitch)
-        );
-        cam.position.copy(player.position);
-        cam.lookAt(lookTarget);
-
-        if (nearFrontDoorExterior()) showPrompt('E 키를 눌러 승차');
-        else showPrompt('');
-      }
-
-      function updateInterior(delta) {
-        const interior = scenes.interior;
-        const bus = scenes.exterior.bus;
-
-        if (interior.phase === 'ride') {
-          interior.targetSpeed = 1;
-          interior.nextStopCountdown -= delta;
-          if (interior.nextStopCountdown <= 0) {
-            interior.phase = 'slowing';
-            showSubtitle('이번 정류장은 다음 정류장입니다.');
-          }
-        } else if (interior.phase === 'slowing') {
-          interior.targetSpeed = 0;
-          interior.doorTarget = 1;
-          if (interior.speed < 0.08) {
-            interior.phase = 'dropoff';
-            showSubtitle('문이 열립니다.');
-          }
-        } else if (interior.phase === 'dropoff') {
-          interior.targetSpeed = 0;
-          interior.doorTarget = 1;
-        }
-
-        interior.speed += (interior.targetSpeed - interior.speed) * delta * 1.2;
-        interior.doorOpen += (interior.doorTarget - interior.doorOpen) * delta * 3.0;
-        interior.shake = Math.sin(clock.elapsedTime * 12) * 0.012 + Math.abs(interior.targetSpeed - interior.speed) * 0.01;
-
-        interior.busRig.position.y = interior.shake * 0.2;
-        interior.busRig.rotation.z = interior.shake * 0.04;
-        interior.busRig.rotation.x = interior.shake * 0.03;
-
-        const cam = interior.camera;
-        const player = interior.playerRig;
-        const move = new THREE.Vector3();
-        if (keys.w) move.z -= 1;
-        if (keys.s) move.z += 1;
-        if (keys.a) move.x -= 1;
-        if (keys.d) move.x += 1;
-
-        if (move.lengthSq() > 0) {
-          move.normalize();
-          const speed = 3.2;
-          const sin = Math.sin(interior.playerYaw);
-          const cos = Math.cos(interior.playerYaw);
-          interior.localPos.x += (move.x * cos - move.z * sin) * speed * delta;
-          interior.localPos.z += (move.z * cos + move.x * sin) * speed * delta;
-        }
-
-        clampLocal(interior.localPos);
-        player.position.copy(interior.localPos);
-        player.position.y = 1.7 + interior.shake * 0.25;
-
-        const lookTarget = new THREE.Vector3(
-          player.position.x + Math.sin(interior.playerYaw) * Math.cos(interior.playerPitch),
-          player.position.y + Math.sin(interior.playerPitch),
-          player.position.z - Math.cos(interior.playerYaw) * Math.cos(interior.playerPitch)
-        );
-        cam.position.copy(player.position);
-        cam.lookAt(lookTarget);
-
-        if (interior.phase === 'dropoff') {
-          showPrompt('E 키를 눌러 하차');
-        } else {
-          showPrompt('');
-        }
-
-        if (interior.phase === 'dropoff' && Math.abs(interior.doorOpen - 1) < 0.05 && nearMidDoorInterior()) {
-          showPrompt('E 키를 눌러 하차');
-        }
-      }
-
-      let stateExtPlayerYaw = 0;
-      let stateExtPlayerPitch = 0;
-
-      function updateControls(delta) {
-        if (currentMode === 'exterior') {
-          stateExtPlayerYaw -= 0.0022 * mouseDX;
-          stateExtPlayerPitch -= 0.0022 * mouseDY;
-          stateExtPlayerPitch = Math.max(-1.35, Math.min(1.35, stateExtPlayerPitch));
-        } else {
-          scenes.interior.playerYaw -= 0.0022 * mouseDX;
-          scenes.interior.playerPitch -= 0.0022 * mouseDY;
-          scenes.interior.playerPitch = Math.max(-1.35, Math.min(1.35, scenes.interior.playerPitch));
-        }
-      }
-
-      let mouseDX = 0;
-      let mouseDY = 0;
-      document.addEventListener('mousemove', function (event) {
-        if (!isPointerLocked) return;
-        mouseDX = event.movementX;
-        mouseDY = event.movementY;
-        updateControls();
-        mouseDX = 0;
-        mouseDY = 0;
       });
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('keydown', e => setKey(e.code, true));
+      document.addEventListener('keyup', e => setKey(e.code, false));
 
-      function animate() {
-        requestAnimationFrame(animate);
-        const delta = clock.getDelta();
+      items.forEach(btn => btn.addEventListener('click', ()=>{
+        items.forEach(b=>b.classList.toggle('selected', b===btn));
+        send.classList.add('enabled');
+      }));
+      send.addEventListener('click', startReservation);
+      startBtn.addEventListener('click', beginSimulation);
+    }
 
-        if (currentMode === 'exterior') {
-          updateExterior(delta);
-        } else {
-          updateInterior(delta);
-        }
+    function beginSimulation(){
+      start.style.display = 'none';
+      safeRequestPointerLock();
+    }
 
-        renderer.render(activeScene, activeCamera);
-      }
+    function handlePointerLockRequest(){
+      if(start.style.display !== 'none' || state === 'end') return;
+      if(!pointerLocked) safeRequestPointerLock();
+    }
 
-      function onPointerLockChange() {
-        isPointerLocked = document.pointerLockElement === renderer.domElement;
-        crosshair.style.display = isPointerLocked ? 'block' : 'none';
-      }
-
-      function onKeyDown(event) {
-        const key = event.key.toLowerCase();
-        if (key === 'w') keys.w = true;
-        if (key === 'a') keys.a = true;
-        if (key === 's') keys.s = true;
-        if (key === 'd') keys.d = true;
-        if (key === 'e') handleE();
-      }
-
-      function onKeyUp(event) {
-        const key = event.key.toLowerCase();
-        if (key === 'w') keys.w = false;
-        if (key === 'a') keys.a = false;
-        if (key === 's') keys.s = false;
-        if (key === 'd') keys.d = false;
-      }
-
-      function onResize() {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        scenes.exterior.camera.aspect = window.innerWidth / window.innerHeight;
-        scenes.exterior.camera.updateProjectionMatrix();
-        scenes.interior.camera.aspect = window.innerWidth / window.innerHeight;
-        scenes.interior.camera.updateProjectionMatrix();
-      }
-
-      startBtn.addEventListener('click', function () {
-        overlay.classList.add('hidden');
-        lockPointer();
-      });
-
-      function lockPointer() {
-        if (renderer && renderer.domElement && renderer.domElement.requestPointerLock) {
+    function safeRequestPointerLock(){
+      if(lockCooldown || state === 'end') return;
+      if(document.pointerLockElement === renderer.domElement) return;
+      setTimeout(() => {
+        if(!lockCooldown && document.pointerLockElement !== renderer.domElement){
           renderer.domElement.requestPointerLock();
         }
+      }, 250);
+    }
+
+    function setKey(code, down){
+      if(code==='KeyW' || code==='ArrowUp') moving.forward = down;
+      if(code==='KeyS' || code==='ArrowDown') moving.back = down;
+      if(code==='KeyA' || code==='ArrowLeft') moving.left = down;
+      if(code==='KeyD' || code==='ArrowRight') moving.right = down;
+    }
+
+    function onMouseMove(e){
+      if(!pointerLocked) return;
+      yaw -= e.movementX * 0.0022;
+      pitch -= e.movementY * 0.0018;
+      pitch = Math.max(-0.5, Math.min(0.45, pitch));
+    }
+
+    function startReservation(){
+      if(state !== 'ready') return;
+      state = 'sent';
+      popup.classList.add('show');
+      setTimeout(()=>popup.classList.remove('show'), 1800);
+      phone.classList.add('hide');
+      setTimeout(()=>{ 
+        busState.moving = true; 
+      }, 2000);
+    }
+
+    function makeBox(w,h,d,c,x=0,y=0,z=0){
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({color:c, roughness:1}));
+      m.position.set(x,y,z);
+      return m;
+    }
+
+    function addRoadDetails(){
+      const laneLineMat = new THREE.MeshStandardMaterial({color:0xf4f7f9, roughness:1});
+      for(let i=0;i<20;i++){
+        const line = new THREE.Mesh(new THREE.BoxGeometry(3.2,0.02,0.25), laneLineMat);
+        line.position.set(40 - i*9.5, 0.01, -1.8);
+        scene.add(line);
+      }
+    }
+
+    function addDetailedBusStop(){
+      const g = new THREE.Group();
+      const shelterBase = makeBox(8.5,0.08,2.8,0xaab4bd, 0.5, 0.42, 6.2);
+      g.add(shelterBase);
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(8.8,0.18,3.2), new THREE.MeshStandardMaterial({color:0xe9f2f8, roughness:.65, metalness:.1}));
+      roof.position.set(0.5,3.8,6.2);
+      g.add(roof);
+      
+      const backPanel = makeBox(8.2,2.1,0.14,0xdfe7ed, 0.5, 1.15, 7.5);
+      g.add(backPanel);
+      
+      const benchSeat = makeBox(4.2,0.12,0.55,0xc7ced6, 0.5, 0.55, 6.8);
+      g.add(benchSeat);
+
+      const signPole = makeBox(0.12,4.2,0.12,0x8f9aa3, -3.2, 2.1, 4.2);
+      g.add(signPole);
+      const signBoard = makeBox(2.6,1.0,0.18,0xffffff, -3.2, 3.25, 4.2);
+      g.add(signBoard);
+      const routeNum = makeBox(0.72,0.72,0.07,0x4bb27d, -4.0, 3.25, 4.1);
+      g.add(routeNum);
+
+      scene.add(g);
+    }
+
+    function makeCar(x,z,dir){
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.6,1.05,4.2), new THREE.MeshStandardMaterial({color: dir>0 ? 0xffd89a : 0xb6e2ff, roughness:.7}));
+      body.position.y = 0.7;
+      g.add(body);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(2.1,0.8,2.2), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.7}));
+      top.position.set(0,1.25,0.1);
+      g.add(top);
+      g.position.set(x,0,z);
+      return g;
+    }
+
+    function makePerson(x,z,rot){
+      const g = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({color:0x6c8fa7, roughness:.9});
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.18,16,16), new THREE.MeshStandardMaterial({color:0xf0cfb1, roughness:.9}));
+      head.position.y = 1.6;
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.17,0.55,5,10), mat);
+      body.position.y = 1.05;
+      g.add(head,body);
+      g.position.set(x,0,z);
+      g.rotation.y = rot;
+      return g;
+    }
+
+    function makeWheelchair(){
+      const g = new THREE.Group();
+      const frameMat = new THREE.MeshStandardMaterial({color:0x41515b, roughness:.6});
+      const seatMat = new THREE.MeshStandardMaterial({color:0x5b86a8, roughness:.75});
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.1,0.38), seatMat);
+      seat.position.y = 0.62;
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.36,0.08), seatMat);
+      back.position.set(0,0.8,-0.16);
+      const wheel1 = new THREE.Mesh(new THREE.TorusGeometry(0.22,0.045,10,18), frameMat);
+      wheel1.rotation.y = Math.PI/2;
+      wheel1.position.set(-0.22,0.22,0.14);
+      const wheel2 = wheel1.clone();
+      wheel2.position.set(0.22,0.22,0.14);
+      const caster1 = new THREE.Mesh(new THREE.SphereGeometry(0.055,10,10), frameMat);
+      caster1.position.set(-0.18,0.08,-0.16);
+      const caster2 = caster1.clone();
+      caster2.position.x = 0.18;
+      g.add(seat,back,wheel1,wheel2,caster1,caster2);
+      g.rotation.y = Math.PI;
+      return g;
+    }
+
+    function makeBus(){
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(7.2,2.6,3), new THREE.MeshStandardMaterial({color:0xf9fcff, roughness:.65}));
+      body.position.y = 1.45;
+      g.add(body);
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(7.25,0.34,3.02), new THREE.MeshStandardMaterial({color:0x4d94cb, roughness:.6}));
+      stripe.position.y = 2.06;
+      g.add(stripe);
+      const windowMat = new THREE.MeshStandardMaterial({color:0xa9d8f7, transparent:true, opacity:.85, roughness:.25});
+      const window1 = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.9,0.08), windowMat);
+      window1.position.set(-2.2,1.75,1.52);
+      const window2 = new THREE.Mesh(new THREE.BoxGeometry(1.0,0.9,0.08), windowMat);
+      window2.position.set(3.0,1.75,1.52);
+      const front = new THREE.Mesh(new THREE.BoxGeometry(0.22,1.5,2.75), new THREE.MeshStandardMaterial({color:0x2f5c80, roughness:.65}));
+      front.position.set(3.5,1.45,0);
+      g.add(window1,window2,front);
+
+      const wheelMat = new THREE.MeshStandardMaterial({color:0x22292f, roughness:.85});
+      const wl = new THREE.Mesh(new THREE.CylinderGeometry(0.46,0.46,0.32,18), wheelMat);
+      wl.rotation.z = Math.PI/2;
+      wl.position.set(-2.4,0.42,1.2);
+      const wr = wl.clone(); wr.position.x = 2.1;
+      g.add(wl,wr);
+
+      // [수정 사항 1 & 2] 입체 폴딩 도어(접이식 문) 메커니즘 구성 및 경사판 규격 통합
+      const doorsGroup = new THREE.Group();
+      doorsGroup.name = 'doors';
+      
+      const doorMat = new THREE.MeshStandardMaterial({color:0xe1ecf7, metalness:0.2, roughness:0.4});
+      const doorGlassMat = new THREE.MeshStandardMaterial({color:0x223344, transparent:true, opacity:0.6, roughness:0.1});
+      
+      // 버스 문 전체 열림 폭: 1.6 (경사판 폭과 일치하도록 정확히 설계)
+      // 한쪽 문 파트당 0.8 너비이며, 이를 폴딩을 위해 각각 0.4 크기의 패널 2개로 나눕니다.
+      const panelW = 0.4;
+      const panelH = 1.65;
+      const panelD = 0.04;
+
+      // 1) 좌측 폴딩 도어 세트
+      leftDoorPivot1 = new THREE.Group();
+      leftDoorPivot1.position.set(-0.8, 0, 0); // 문틀의 좌측 끝 기준점
+      
+      const lPanel1 = new THREE.Mesh(new THREE.BoxGeometry(panelW, panelH, panelD), doorMat);
+      lPanel1.position.set(panelW/2, panelH/2, 0);
+      const lGlass1 = new THREE.Mesh(new THREE.BoxGeometry(panelW*0.6, panelH*0.7, panelD+0.01), doorGlassMat);
+      lGlass1.position.set(panelW/2, panelH/2, 0);
+      leftDoorPivot1.add(lPanel1, lGlass1);
+
+      leftDoorPivot2 = new THREE.Group();
+      leftDoorPivot2.position.set(panelW, 0, 0); // 첫 번째 패널의 끝점 기준
+      const lPanel2 = new THREE.Mesh(new THREE.BoxGeometry(panelW, panelH, panelD), doorMat);
+      lPanel2.position.set(panelW/2, panelH/2, 0);
+      const lGlass2 = new THREE.Mesh(new THREE.BoxGeometry(panelW*0.6, panelH*0.7, panelD+0.01), doorGlassMat);
+      lGlass2.position.set(panelW/2, panelH/2, 0);
+      leftDoorPivot2.add(lPanel2, lGlass2);
+      leftDoorPivot1.add(leftDoorPivot2); // 피벗 체이닝으로 2중 접힘 구현
+
+      // 2) 우측 폴딩 도어 세트
+      rightDoorPivot1 = new THREE.Group();
+      rightDoorPivot1.position.set(0.8, 0, 0); // 문틀의 우측 끝 기준점
+      
+      const rPanel1 = new THREE.Mesh(new THREE.BoxGeometry(panelW, panelH, panelD), doorMat);
+      rPanel1.position.set(-panelW/2, panelH/2, 0);
+      const rGlass1 = new THREE.Mesh(new THREE.BoxGeometry(panelW*0.6, panelH*0.7, panelD+0.01), doorGlassMat);
+      rGlass1.position.set(-panelW/2, panelH/2, 0);
+      rightDoorPivot1.add(rPanel1, rGlass1);
+
+      rightDoorPivot2 = new THREE.Group();
+      rightDoorPivot2.position.set(-panelW, 0, 0);
+      const rPanel2 = new THREE.Mesh(new THREE.BoxGeometry(panelW, panelH, panelD), doorMat);
+      rPanel2.position.set(-panelW/2, panelH/2, 0);
+      const rGlass2 = new THREE.Mesh(new THREE.BoxGeometry(panelW*0.6, panelH*0.7, panelD+0.01), doorGlassMat);
+      rGlass2.position.set(-panelW/2, panelH/2, 0);
+      rightDoorPivot2.add(rPanel2, rGlass2);
+      rightDoorPivot1.add(rightDoorPivot2);
+
+      doorsGroup.add(leftDoorPivot1, rightDoorPivot1);
+      doorsGroup.position.set(0.5, 0.55, 1.53); // 탑승구 중앙 중심 위치 정렬
+      g.add(doorsGroup);
+
+      // [수정 사항 2] 내려오는 경사판의 폭(Z축)을 문의 유효 폭인 1.6과 정확하게 매칭시킴
+      const rampPivot = new THREE.Group();
+      rampPivot.name = 'ramp';
+      const rampMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 3.8, 1.6), // 문의 총 폭(1.6)과 단 1mm의 오차도 없이 동일하게 수정
+        new THREE.MeshStandardMaterial({
+          color:0xdfe4ea,
+          emissive:0xaaccff,
+          emissiveIntensity:0.4,
+          roughness:.5
+        })
+      );
+      rampMesh.rotation.z = Math.PI / 2;
+      rampMesh.position.set(2.02,-0.92,0);
+      rampPivot.add(rampMesh);
+      
+      const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,1.64), new THREE.MeshStandardMaterial({color:0x718093, roughness:.8}));
+      hinge.position.set(0.22,0.0,0);
+      rampPivot.add(hinge);
+      
+      rampPivot.position.set(0.5,0.55,1.53);
+      g.add(rampPivot);
+
+      const light = new THREE.PointLight(0xfff3d8, 0, 10, 2);
+      light.position.set(0,2.2,0);
+      light.name = 'interiorLight';
+      g.add(light);
+
+      return g;
+    }
+
+    function animate(){
+      requestAnimationFrame(animate);
+      if(state === 'end') return; 
+      
+      const dt = Math.min(clock.getDelta(), 0.033);
+      update(dt);
+      renderer.render(scene, camera);
+    }
+
+    function update(dt){
+      const speed = player.speed * dt;
+      if(state !== 'end'){
+        const forward = (moving.forward?1:0) - (moving.back?1:0);
+        const strafe = (moving.left?1:0) - (moving.right?1:0);
+        const dirX = Math.sin(yaw);
+        const dirZ = Math.cos(yaw);
+        const rightX = Math.sin(yaw + Math.PI/2);
+        const rightZ = Math.cos(yaw + Math.PI/2);
+        player.x += (rightX * strafe + dirX * forward) * speed;
+        player.z += (rightZ * strafe + dirZ * forward) * speed;
+        player.x = THREE.MathUtils.clamp(player.x, -5.8, 5.8);
+        player.z = THREE.MathUtils.clamp(player.z, -3.2, 16);
       }
 
-      createWorld();
+      if(busState.moving){
+        bus.position.x = THREE.MathUtils.lerp(bus.position.x, 0, 0.015);
+        if(Math.abs(bus.position.x) < 0.1){
+          bus.position.x = 0;
+          busState.moving = false;
+          busState.arrived = true;
 
-      function createWorld() {
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        app.appendChild(renderer.domElement);
-
-        clock = new THREE.Clock();
-
-        buildExteriorScene();
-        buildInteriorScene();
-        switchTo('exterior');
-
-        window.addEventListener('resize', onResize);
-        document.addEventListener('pointerlockchange', onPointerLockChange);
-        document.addEventListener('keydown', onKeyDown);
-        document.addEventListener('keyup', onKeyUp);
-        animate();
+          // 문 열림 애니메이션 트리거 시간 조율
+          setTimeout(()=>{
+            ramp.visible = true;
+            ramp.rotation.x = 0;
+            ramp.position.set(0.5,0.55,1.53);
+            ramp.userData.phase = 0;
+          }, 850);
+          setTimeout(()=>{
+            arrow.visible = true;
+            intro.style.display = 'block';
+            setTimeout(()=> intro.style.display = 'none', 3000);
+          }, 1800);
+        }
       }
-    })();
+
+      // [애니메이션] 버스 도어가 실제 폴딩(접이식) 방식으로 동작하도록 각도 연산 적용
+      if (busState.arrived) {
+        doorOpenProgress = THREE.MathUtils.lerp(doorOpenProgress, 1, 0.05);
+        
+        // 각 패널의 회전각 계산 (문이 열리면서 두 패널이 서로 반대로 안쪽으로 접힘)
+        const angleLeft1 = -Math.PI / 2 * doorOpenProgress; 
+        const angleLeft2 = Math.PI * doorOpenProgress;      
+
+        const angleRight1 = Math.PI / 2 * doorOpenProgress;
+        const angleRight2 = -Math.PI * doorOpenProgress;
+
+        leftDoorPivot1.rotation.y = angleLeft1;
+        leftDoorPivot2.rotation.y = angleLeft2;
+
+        rightDoorPivot1.rotation.y = angleRight1;
+        rightDoorPivot2.rotation.y = angleRight2;
+      }
+
+      if(busState.arrived && ramp.visible){
+        if(!ramp.userData.phase) ramp.userData.phase = 0;
+        ramp.userData.phase = Math.min(1, ramp.userData.phase + dt*0.55);
+        const p = ramp.userData.phase;
+        if(p < 0.45){
+          ramp.rotation.x = THREE.MathUtils.lerp(0, 0.62, p/0.45);
+          ramp.position.y = THREE.MathUtils.lerp(0.55, 0.38, p/0.45);
+        }else{
+          ramp.rotation.x = THREE.MathUtils.lerp(0.62, 1.28, (p-0.45)/0.55);
+          ramp.position.y = THREE.MathUtils.lerp(0.38, 0.06, (p-0.45)/0.55);
+        }
+      }
+
+      if(arrow.visible){
+        arrow.position.y = 0.08 + Math.sin(performance.now()*0.006)*0.05;
+      }
+
+      camera.position.set(player.x, 1.28, player.z);
+      const lookDir = new THREE.Vector3(
+        Math.sin(yaw) * Math.cos(pitch),
+        Math.sin(pitch),
+        Math.cos(yaw) * Math.cos(pitch)
+      );
+      camera.lookAt(camera.position.x + lookDir.x, camera.position.y + lookDir.y, camera.position.z + lookDir.z);
+
+      wheelchair.position.set(player.x, 0, player.z);
+      wheelchair.rotation.y = yaw + Math.PI;
+
+      if(state !== 'end' && busState.arrived && ramp.userData.phase > 0.9){
+        const dx = player.x - 0.5; 
+        const dz = player.z - (-3.2); 
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        
+        if(dist < 1.8){
+          state = 'end'; 
+          moving.forward = moving.back = moving.left = moving.right = false;
+          document.exitPointerLock();
+          success.style.display = 'block';
+          document.getElementById('hud').style.display = 'none';
+          arrow.visible = false;
+        }
+      }
+
+      if(busState.arrived){
+        busInteriorLight.intensity = THREE.MathUtils.lerp(busInteriorLight.intensity, 2.1, 0.03);
+      }
+    }
+
+    function onResize(){
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    }
   </script>
 </body>
 </html>
